@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.ServiceModel.Channels;
 using System.ServiceModel;
@@ -11,6 +12,7 @@ using MediaPortal.Dialogs;
 using Microsoft.Win32;
 using MyAnimePlugin3.Events;
 using MyAnimePlugin3.JMMServerBinary;
+using Stream = System.IO.Stream;
 
 namespace MyAnimePlugin3.ViewModel
 {
@@ -53,8 +55,25 @@ namespace MyAnimePlugin3.ViewModel
 			{
 				ServerStatusEvent(ev);
 			}
-		}
+        }
+                #region Call_via_APIv2
+        public static WebRequest request = null;
 
+        public static Stream GetImage(string id, int imagetype, string thumb)
+        {
+            AnimePluginSettings settings = new AnimePluginSettings();
+            string url = string.Format(@"http://{0}:{1}/JMMServerImage2", settings.JMMServer_Address, settings.JMMServer_Port);
+
+            JMMServerVM.request = WebRequest.Create($"{url}/GetImage/{id}/{imagetype}/0");
+
+            using (var response = request.GetResponse())
+            using (Stream stream = response.GetResponseStream())
+            {
+                return stream;
+            }
+        }
+
+        #endregion
 		public static JMMServerVM Instance
 		{
 			get
@@ -317,7 +336,7 @@ namespace MyAnimePlugin3.ViewModel
 			try
 			{
 				AnimePluginSettings settings = new AnimePluginSettings();
-				string url = string.Format(@"http://{0}:{1}/JMMServerImage", settings.JMMServer_Address, settings.JMMServer_Port);
+				string url = string.Format(@"http://{0}:{1}/JMMServerImage2", settings.JMMServer_Address, settings.JMMServer_Port);
 				BasicHttpBinding binding = new BasicHttpBinding();
 				binding.MessageEncoding = WSMessageEncoding.Mtom;
 				binding.MaxReceivedMessageSize = 2147483647;

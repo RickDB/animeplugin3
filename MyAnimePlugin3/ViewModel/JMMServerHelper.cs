@@ -288,12 +288,12 @@ namespace MyAnimePlugin3.ViewModel
 			return new AniDB_AnimeVM(contractAnime);
 		}
 
-		public static byte[] GetImage(string entityID, ImageEntityType imageType, bool thumbNailOnly)
+        public System.IO.Stream GetImage(string entityID, ImageEntityType imageType, bool thumbNailOnly)
 		{
 			try
 			{
-				byte[] imageArray = JMMServerVM.Instance.imageClient.GetImage(entityID, (int)imageType, thumbNailOnly);
-				return imageArray;
+				System.IO.Stream imageStream = JMMServerVM.Instance.imageClient.GetImage(entityID, (int)imageType, thumbNailOnly);
+				return imageStream;
 			}
 			catch (Exception ex)
 			{

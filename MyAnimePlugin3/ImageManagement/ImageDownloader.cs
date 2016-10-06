@@ -649,131 +649,116 @@ namespace MyAnimePlugin3.ImageManagement
 
 		}
 
-		private void ProcessImageDownloadRequest(ImageDownloadRequest req)
-		{
-			try
-			{
-				string fileName = GetFileName(req, false);
-				string entityID = GetEntityID(req);
-				bool downloadImage = true;
-				bool fileExists = File.Exists(fileName);
+	    private void ProcessImageDownloadRequest(ImageDownloadRequest req)
+	    {
+	        try
+	        {
+	            string fileName = GetFileName(req, false);
+	            string entityID = GetEntityID(req);
+	            bool downloadImage = true;
+	            bool fileExists = File.Exists(fileName);
 
-				if (fileExists)
-				{
-					if (!req.ForceDownload)
-						downloadImage = false;
-					else
-						downloadImage = true;
-				}
-				else
-					downloadImage = true;
+	            if (fileExists)
+	            {
+	                if (!req.ForceDownload)
+	                    downloadImage = false;
+	                else
+	                    downloadImage = true;
+	            }
+	            else
+	                downloadImage = true;
 
-				if (downloadImage)
-				{
-					string tempName = Path.Combine(Utils.GetImagesTempFolder(), Path.GetFileName(fileName));
-					if (File.Exists(tempName)) File.Delete(tempName);
-
-
-					OnImageDownloadEvent(new ImageDownloadEventArgs("", req, ImageDownloadEventType.Started));
-					if (fileExists) File.Delete(fileName);
-
-					byte[] imageArray = null;
-					try
-					{
-						imageArray = JMMServerHelper.GetImage(entityID, req.ImageType, false);
-					}
-					catch { }
-
-					if (imageArray == null)
-					{
-						imagesToDownload.Remove(req);
-						OnQueueUpdateEvent(new QueueUpdateEventArgs(this.QueueCount));
-						return;
-					}
-
-					File.WriteAllBytes(tempName, imageArray);
-
-					// move the file to it's final location
-					string fullPath = Path.GetDirectoryName(fileName);
-					if (!Directory.Exists(fullPath))
-						Directory.CreateDirectory(fullPath);
-
-					// move the file to it's final location
-					File.Move(tempName, fileName);
+	            if (downloadImage)
+	            {
+	                string tempName = Path.Combine(Utils.GetImagesTempFolder(), Path.GetFileName(fileName));
+	                if (File.Exists(tempName)) File.Delete(tempName);
 
 
+	                OnImageDownloadEvent(new ImageDownloadEventArgs("", req, ImageDownloadEventType.Started));
+	                if (fileExists) File.Delete(fileName);
+	                Stream ImageStream = JMMServerVM.GetImage(entityID, (int) req.ImageType, "0");
+	                if (ImageStream == null) return;
+	                using (var fileStream = File.Create(tempName))
+	                {
+	                    ImageStream.Seek(0, SeekOrigin.Begin);
+	                    ImageStream.CopyTo(fileStream);
+	                }
 
-				}
+	                //File.WriteAllBytes(tempName, imageArray);
 
-				OnImageDownloadEvent(new ImageDownloadEventArgs("", req, ImageDownloadEventType.Complete));
+	                // move the file to it's final location
+	                string fullPath = Path.GetDirectoryName(fileName);
+	                if (!Directory.Exists(fullPath))
+	                    Directory.CreateDirectory(fullPath);
+
+	                // move the file to it's final location
+	                File.Move(tempName, fileName);
+	            }
+
+	            OnImageDownloadEvent(new ImageDownloadEventArgs("", req, ImageDownloadEventType.Complete));
 
 
-				// if the file is a tvdb fanart also get the thumbnail
-				if (req.ImageType == ImageEntityType.TvDB_FanArt)
-				{
-					fileName = GetFileName(req, true);
-					entityID = GetEntityID(req);
-					downloadImage = true;
-					fileExists = File.Exists(fileName);
+	            // if the file is a tvdb fanart also get the thumbnail
+	            if (req.ImageType == ImageEntityType.TvDB_FanArt)
+	            {
+	                fileName = GetFileName(req, true);
+	                entityID = GetEntityID(req);
+	                downloadImage = true;
+	                fileExists = File.Exists(fileName);
 
-					if (fileExists)
-					{
-						if (!req.ForceDownload)
-							downloadImage = false;
-						else
-							downloadImage = true;
-					}
-					else
-						downloadImage = true;
+	                if (fileExists)
+	                {
+	                    if (!req.ForceDownload)
+	                        downloadImage = false;
+	                    else
+	                        downloadImage = true;
+	                }
+	                else
+	                    downloadImage = true;
 
-					if (downloadImage)
-					{
-						string tempName = Path.Combine(Utils.GetImagesTempFolder(), Path.GetFileName(fileName));
-						if (File.Exists(tempName)) File.Delete(tempName);
+	                if (downloadImage)
+	                {
+	                    string tempName = Path.Combine(Utils.GetImagesTempFolder(), Path.GetFileName(fileName));
+	                    if (File.Exists(tempName)) File.Delete(tempName);
 
-						OnImageDownloadEvent(new ImageDownloadEventArgs("", req, ImageDownloadEventType.Started));
-						if (fileExists) File.Delete(fileName);
+	                    OnImageDownloadEvent(new ImageDownloadEventArgs("", req, ImageDownloadEventType.Started));
+	                    if (fileExists) File.Delete(fileName);
 
-						byte[] imageArray = null;
-						try
-						{
-							imageArray = JMMServerVM.Instance.imageClient.GetImage(entityID, (int)req.ImageType, true);
-						}
-						catch { }
+	                    Stream ImageStream = JMMServerVM.GetImage(entityID, (int) req.ImageType, "0");
+	                    if (ImageStream == null) return;
 
-						if (imageArray == null)
-						{
-							imagesToDownload.Remove(req);
-							OnQueueUpdateEvent(new QueueUpdateEventArgs(this.QueueCount));
-							return;
-						}
+	                    using (var fileStream = File.Create(tempName))
+	                    {
+	                        ImageStream.Seek(0, SeekOrigin.Begin);
+	                        ImageStream.CopyTo(fileStream);
+	                    }
 
-						File.WriteAllBytes(tempName, imageArray);
+	                    //File.WriteAllBytes(tempName, imageArray);
 
-						// move the file to it's final location
-						string fullPath = Path.GetDirectoryName(fileName);
-						if (!Directory.Exists(fullPath))
-							Directory.CreateDirectory(fullPath);
+	                    // move the file to it's final location
+	                    string fullPath = Path.GetDirectoryName(fileName);
+	                    if (!Directory.Exists(fullPath))
+	                        Directory.CreateDirectory(fullPath);
 
-						// move the file to it's final location
-						File.Move(tempName, fileName);
-					}
-				}
+	                    // move the file to it's final location
+	                    File.Move(tempName, fileName);
+	                }
+	            }
 
-				imagesToDownload.Remove(req);
-				OnQueueUpdateEvent(new QueueUpdateEventArgs(this.QueueCount));
+	            imagesToDownload.Remove(req);
+	            OnQueueUpdateEvent(new QueueUpdateEventArgs(this.QueueCount));
 
-				//OnGotShowInfoEvent(new GotShowInfoEventArgs(req.animeID));
-			}
-			catch (Exception ex)
-			{
-				imagesToDownload.Remove(req);
-				OnQueueUpdateEvent(new QueueUpdateEventArgs(this.QueueCount));
-				BaseConfig.MyAnimeLog.Write(ex.ToString());
-			}
-		}
+	            //OnGotShowInfoEvent(new GotShowInfoEventArgs(req.animeID));
+	        }
+	        catch (Exception ex)
+	        {
+	            imagesToDownload.Remove(req);
+	            OnQueueUpdateEvent(new QueueUpdateEventArgs(this.QueueCount));
+	            BaseConfig.MyAnimeLog.Write(ex.ToString());
+	        }
+	    }
 
-		public void DownloadImage(ImageDownloadRequest req)
+	    public void DownloadImage(ImageDownloadRequest req)
 		{
 			try
 			{
@@ -803,16 +788,19 @@ namespace MyAnimePlugin3.ImageManagement
 						OnImageDownloadEvent(new ImageDownloadEventArgs("", req, ImageDownloadEventType.Started));
 						if (fileExists) File.Delete(fileName);
 
-						byte[] imageArray = null;
-						try
-						{
-							imageArray = JMMServerVM.Instance.imageClient.GetImage(entityID, (int)req.ImageType, false);
-						}
-						catch { }
+                        OnImageDownloadEvent(new ImageDownloadEventArgs("", req, ImageDownloadEventType.Started));
+                        if (fileExists) File.Delete(fileName);
 
-						if (imageArray == null) return;
+                        Stream ImageStream = JMMServerVM.GetImage(entityID, (int)req.ImageType, "0");
+                        if (ImageStream == null) return;
 
-						File.WriteAllBytes(tempName, imageArray);
+                        using (var fileStream = File.Create(tempName))
+                        {
+                            ImageStream.Seek(0, SeekOrigin.Begin);
+                            ImageStream.CopyTo(fileStream);
+                        }
+
+                        //File.WriteAllBytes(tempName, imageArray);
 
 						// move the file to it's final location
 						string fullPath = Path.GetDirectoryName(fileName);
@@ -821,9 +809,6 @@ namespace MyAnimePlugin3.ImageManagement
 
 						// move the file to it's final location
 						File.Move(tempName, fileName);
-
-
-
 					}
 
 
@@ -853,16 +838,15 @@ namespace MyAnimePlugin3.ImageManagement
 							OnImageDownloadEvent(new ImageDownloadEventArgs("", req, ImageDownloadEventType.Started));
 							if (fileExists) File.Delete(fileName);
 
-							byte[] imageArray = null;
-							try
-							{
-								imageArray = JMMServerVM.Instance.imageClient.GetImage(entityID, (int)req.ImageType, true);
-							}
-							catch { }
+                            Stream ImageStream = JMMServerVM.GetImage(entityID, (int)req.ImageType, "0");
+                            if (ImageStream == null) return;
+                            using (var fileStream = File.Create(tempName))
+                            {
+                                ImageStream.Seek(0, SeekOrigin.Begin);
+                                ImageStream.CopyTo(fileStream);
+                            }
 
-							if (imageArray == null) return;
-
-							File.WriteAllBytes(tempName, imageArray);
+							//File.WriteAllBytes(tempName, imageArray);
 
 							// move the file to it's final location
 							string fullPath = Path.GetDirectoryName(fileName);
